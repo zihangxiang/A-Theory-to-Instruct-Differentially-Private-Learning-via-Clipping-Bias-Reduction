@@ -1,0 +1,20 @@
+for expected_batchsize in 2000
+do
+
+for epsilon in 8
+do
+
+for EPOCH in 50
+do
+
+for lr in 0.08
+do
+
+python main.py --expected_batchsize $expected_batchsize --epsilon $epsilon --EPOCH $EPOCH --lr $lr --log_dir logs 
+
+
+done
+done
+done
+done
+
