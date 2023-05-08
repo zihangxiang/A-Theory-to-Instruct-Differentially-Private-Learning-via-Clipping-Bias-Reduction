@@ -117,10 +117,7 @@ class train_master:
                 self.whole_label_container_test = torch.cat([self.whole_label_container_test, targets], dim=0)
         print(f'==> test data size: {self.whole_data_container_test.size()}')
         print(f'==> all labels:', set(self.whole_label_container_test.tolist()))
-        self.transformation = T.Compose([
-                                    my_RandomHorizontalFlip(p = 0.5),
-                                    my_randcrop(32, padding = 4),
-                                    ])
+  
 
 
         # ''' using pub data '''
