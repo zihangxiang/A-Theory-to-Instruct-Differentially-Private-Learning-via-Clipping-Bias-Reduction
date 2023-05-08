@@ -40,14 +40,12 @@ class train_master:
 
         self.model = model   
         self.num_of_classes = self.model.num_of_classes
-        self.num_of_models = arg_setup.num_groups
         
         self.worker_model_func, self.worker_param_func, self.worker_buffers_func = make_functional_with_buffers(deepcopy(self.model), disable_autograd_tracking=True)
 
-        self.num_groups = arg_setup.num_groups
-        self.times_larger = self.arg_setup.samples_per_group 
+        self.times_larger = 1 
 
-        self.loaders = {'train': loaders[0], 'val': loaders[1], 'test': loaders[2], 'batch_computer_loader': loaders[3]}
+        self.loaders = {'train': loaders[0], 'val': loaders[1], 'test': loaders[2]}
         self.train_setups = train_setups
         
         self.loss_metric = self.train_setups['loss_metric']
@@ -86,7 +84,7 @@ class train_master:
                 self.shape_interval.append(None)
         self.all_indexes = list(range(self.arg_setup.usable_train_data_samples))
     
-        self.reindexing = self.get_reindex(self.num_of_models)
+        # self.reindexing = self.get_reindex(self.num_of_models)
         
         self.grad_momentum = [ torch.zeros_like(p.data) if p.requires_grad else None for p in self.model.parameters()  ]
         self.iterator_check = [0 for _ in self.model.parameters()]
@@ -125,20 +123,20 @@ class train_master:
                                     ])
 
 
-        ''' using pub data '''
-        self.pub_num = self.arg_setup.pub_num
-        self.dummy_index_pub = torch.tensor( [ i for i in range(self.pub_num) ] )
+        # ''' using pub data '''
+        # self.pub_num = self.arg_setup.pub_num
+        # self.dummy_index_pub = torch.tensor( [ i for i in range(self.pub_num) ] )
         
-        if self.pub_num == 0:
-            self.dummy_index_pub = torch.tensor( [] )
-        else:
-            self.dummy_index_pub_tmp = []
-            for _ in range(self.num_groups):
-                tmp_index = torch.randint(self.pub_num, (self.times_larger,))
-                self.dummy_index_pub_tmp.append( tmp_index)
-            self.dummy_index_pub = torch.cat(self.dummy_index_pub_tmp)
+        # if self.pub_num == 0:
+        #     self.dummy_index_pub = torch.tensor( [] )
+        # else:
+        #     self.dummy_index_pub_tmp = []
+        #     for _ in range(self.num_groups):
+        #         tmp_index = torch.randint(self.pub_num, (self.times_larger,))
+        #         self.dummy_index_pub_tmp.append( tmp_index)
+        #     self.dummy_index_pub = torch.cat(self.dummy_index_pub_tmp)
         
-        print('==> pub data generation done, pub data shape:', self.dummy_index_pub.shape)
+        # print('==> pub data generation done, pub data shape:', self.dummy_index_pub.shape)
         
         '''logging'''
         self.data_logger.write_log(f'weighted_recall.csv', self.arg_setup)
@@ -146,20 +144,20 @@ class train_master:
         for i in range(torch.cuda.device_count()):
             logger.write_log(f'\ncuda memory summary for device {i}:\n{torch.cuda.memory_summary(device=f"cuda:{i}", abbreviated=True)}', verbose=True)
     
-    def get_reindex(self, real_batch_num):
-        ''' reindexing '''
-        ''' [pri, pri, pub, pub, pub, pub] -> [pri, pub, pub, pri, pub, pub] '''
-        if self.times_larger == 0:
-            return torch.tensor( np.arange(real_batch_num) )
+    # def get_reindex(self, real_batch_num):
+    #     ''' reindexing '''
+    #     ''' [pri, pri, pub, pub, pub, pub] -> [pri, pub, pub, pri, pub, pub] '''
+    #     if self.times_larger == 0:
+    #         return torch.tensor( np.arange(real_batch_num) )
 
-        reindexing = []
-        for i in range(real_batch_num):
-            reindexing.append(i)
-            # self.reindexing += list( range(self.num_of_models + i * times_larger, self.num_of_models + (i + 1) * times_larger) )
-            ''' fetch the data sample from each data batch, in the same position i'''
-            reindexing += [i + self.num_of_models * j for j in range(1, self.times_larger+1)]
-        reindexing = torch.tensor(self.reindexing, device = self.model.device)
-        return reindexing
+    #     reindexing = []
+    #     for i in range(real_batch_num):
+    #         reindexing.append(i)
+    #         # self.reindexing += list( range(self.num_of_models + i * times_larger, self.num_of_models + (i + 1) * times_larger) )
+    #         ''' fetch the data sample from each data batch, in the same position i'''
+    #         reindexing += [i + self.num_of_models * j for j in range(1, self.times_larger+1)]
+    #     reindexing = torch.tensor(self.reindexing, device = self.model.device)
+    #     return reindexing
 
     def count_parameters(self):
         total = 0
@@ -241,14 +239,14 @@ class train_master:
     
     def _per_sample_augmentation(self):
         ''' per sample augmentation '''
-        if self.pub_num == 0:
-            return torch.tensor([], device=self.model.device), torch.tensor([], dtype=torch.int64, device=self.model.device)
-        tmp_index = np.random.permutation(self.dummy_index_pub)
+        # if self.pub_num == 0:
+        return torch.tensor([], device=self.model.device), torch.tensor([], dtype=torch.int64, device=self.model.device)
+        # tmp_index = np.random.permutation(self.dummy_index_pub)
         
-        pub_input = self.whole_data_container_test[tmp_index]
-        pub_target = self.whole_label_container_test[tmp_index]
+        # pub_input = self.whole_data_container_test[tmp_index]
+        # pub_target = self.whole_label_container_test[tmp_index]
         
-        return pub_input, pub_target
+        # return pub_input, pub_target
     
     def sampling_noise_summary(self, index, per_grad):
         grad_flatten = self.flatten_to_rows(per_grad[0].shape[0], per_grad)
@@ -296,15 +294,14 @@ class train_master:
             return loss
         def self_aug_per_grad(model_para, buffers, inputs, targets):
             per_grad = grad(compute_loss)(model_para, buffers, inputs, targets)
-            for _ in range(self.arg_setup.self_aug_times):
-                t_inputs = self.transformation(inputs)
-                cur_grad = grad(compute_loss)(model_para, buffers, t_inputs, targets)
-                per_grad = [p + g for p, g in zip(per_grad, cur_grad)]
-            per_grad = [p / (self.arg_setup.self_aug_times + 1) for p in per_grad]
+            # for _ in range(self.arg_setup.self_aug_times):
+            #     t_inputs = self.transformation(inputs)
+            #     cur_grad = grad(compute_loss)(model_para, buffers, t_inputs, targets)
+            #     per_grad = [p + g for p, g in zip(per_grad, cur_grad)]
+            # per_grad = [p / (self.arg_setup.self_aug_times + 1) for p in per_grad]
             return per_grad
         per_grad = vmap(self_aug_per_grad, in_dims=(None, None, 0, 0), randomness='same')(self.worker_param_func, self.worker_buffers_func, inputs, targets)
-        
-        return per_grad
+        return list(per_grad)
        
         
     def one_epoch(self, *, train_or_val, loader):
@@ -326,15 +323,15 @@ class train_master:
                     new_inputs = torch.concat([the_inputs, pub_inputs], dim = 0)
                     new_targets = torch.concat([the_targets, pub_targets], dim = 0)
                     
-                    reindexing = self.get_reindex(the_inputs.shape[0])
-                    assert new_inputs.shape[0] == len(reindexing)
-                    new_inputs = new_inputs[reindexing]
-                    new_targets = new_targets[reindexing]
+                    # reindexing = self.get_reindex(the_inputs.shape[0])
+                    # assert new_inputs.shape[0] == len(reindexing)
+                    # new_inputs = new_inputs[reindexing]
+                    # new_targets = new_targets[reindexing]
                     
-                    assert new_inputs.shape[0] == the_inputs.shape[0] * (self.times_larger+1), f'new input shape: {new_inputs.shape}'
+                    # assert new_inputs.shape[0] == the_inputs.shape[0] * (self.times_larger+1), f'new input shape: {new_inputs.shape}'
                     
-                    new_inputs = torch.stack(torch.split(new_inputs, self.arg_setup.samples_per_group+1, dim = 0))
-                    new_targets = torch.stack(torch.split(new_targets, self.arg_setup.samples_per_group+1, dim = 0))
+                    new_inputs = torch.stack(torch.split(new_inputs, 1, dim = 0))
+                    new_targets = torch.stack(torch.split(new_targets, 1, dim = 0))
                         
                     per_grad = self.get_per_grad(new_inputs, new_targets)
 
@@ -396,7 +393,7 @@ class train_master:
             if p.requires_grad:
                 p.grad = torch.sum(p_stack, dim = 0) 
                 p.grad += self.arg_setup.C * self.sigma * torch.randn_like(p.grad) 
-                p.grad /= self.num_groups
+                p.grad /= self.arg_setup.expected_batchsize
                 
         ''' gradient momentum '''     
         for index, p in enumerate(self.model.parameters()):
@@ -427,25 +424,25 @@ class train_master:
     def flatten_to_rows(self, leading_dim, iterator):
         return torch.cat([p.reshape(leading_dim, -1) for p in iterator], dim = 1)
     
-import random
-class my_randcrop(T.RandomCrop):
-    @staticmethod
-    def get_params(img, output_size) :
-        _, h, w = None, 32,32
-        th, tw = output_size
+# import random
+# class my_randcrop(T.RandomCrop):
+#     @staticmethod
+#     def get_params(img, output_size) :
+#         _, h, w = None, 32,32
+#         th, tw = output_size
 
-        if h < th or w < tw:
-            raise ValueError(f"Required crop size {(th, tw)} is larger than input image size {(h, w)}")
+#         if h < th or w < tw:
+#             raise ValueError(f"Required crop size {(th, tw)} is larger than input image size {(h, w)}")
 
-        if w == tw and h == th:
-            return 0, 0, h, w
+#         if w == tw and h == th:
+#             return 0, 0, h, w
 
-        i = random.randint(0, h - th )
-        j = random.randint(0, w - tw )
-        return i, j, th, tw
+#         i = random.randint(0, h - th )
+#         j = random.randint(0, w - tw )
+#         return i, j, th, tw
 
-class my_RandomHorizontalFlip(T.RandomHorizontalFlip):
-    def forward(self, img):
-        if random.random() < self.p:
-            return img.flip(-1)
-        return img
+# class my_RandomHorizontalFlip(T.RandomHorizontalFlip):
+#     def forward(self, img):
+#         if random.random() < self.p:
+#             return img.flip(-1)
+#         return img

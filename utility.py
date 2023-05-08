@@ -191,236 +191,234 @@ class log_master:
 def parse_args():
     parser = argparse.ArgumentParser()
     
-    parser.add_argument("--expected_batchsize", help = "expected_batchsize", type=int, default=111, required=True)
-    parser.add_argument("--EPOCH", help = "EPOCH", type=int, default=66, required=True)
-    parser.add_argument("--epsilon", help = "the epsilon value", type=float, default=8.8, required=True)
-    parser.add_argument("--lr", help = "learing rate", type=float, default=0.11, required=True)
+    parser.add_argument("--expected_batchsize", help = "expected_batchsize", type=int, default=1000, required=True)
+    parser.add_argument("--EPOCH", help = "EPOCH", type=int, default=50, required=True)
+    parser.add_argument("--epsilon", help = "the epsilon value", type=float, default=8.0, required=True)
+    parser.add_argument("--lr", help = "learing rate", type=float, default=0.01, required=True)
     parser.add_argument("--log_dir", help = "log directory", type=str, default='logs', required=True)
     return parser.parse_args()
 
 
 
-def grad_summary(epoch, per_grad):
+# def grad_summary(epoch, per_grad):
+
+#     data_collection = []
+#     for p in per_grad:
+#         batch_size = p.shape[0]
+#         data_collection.append(p.reshape(batch_size,-1))
+        
+#     data_collection = torch.cat(data_collection, dim = 1)
+#     print(f'==> data_collection.shape: {data_collection.shape}')
+    
+#     samples = 15
+#     selected_indexes = torch.randint(0, data_collection.shape[0], (samples,))
+#     plot_data = data_collection[selected_indexes]
+    
+#     plt.figure(figsize=(12, 8))
+#     plt.style.use('seaborn-dark')
+    
+#     mode_color_his = '#f97306'
+#     mode_color_line = 'b'
+#     num_bins = 500
+#     for i in range(samples):
+#         plt.subplot(4,4,i+1)
+#         data = plot_data[i].cpu().numpy()
+#         plt.hist(data, bins = num_bins, density = True, color = mode_color_his)
+        
+#         results = data
+#         mu = np.mean(results)
+#         sigma = np.std(results)
+#         vec_norm = np.linalg.norm(results, ord = 2)
+#         x = np.linspace(mu - 3*sigma, mu + 3*sigma, num_bins)
+#         plt.plot(x, stats.norm.pdf(x, mu, sigma), '--', label = f'norm:{vec_norm:.1f}\n$\mu:{mu:.2f}$\n$\sigma:{sigma:.2f}$', color = mode_color_line)
+        
+#         # plt.text(60, .025, r'$\mu=100,\ \sigma=15$')
+#         plt.legend()
+#         plt.title(f'grad_{i}', fontsize = 8)
+    
+    
+#     plt.subplot(4, 4, samples+1)
+#     for i in range(samples):
+#         data = plot_data[i].cpu().numpy()
+#         plt.hist(data, bins = num_bins, density = True)
+#     plt.title(f'all grads', fontsize = 4)
+    
+    
+#     # plt.title('Histogram of coordinate value')
+#     plt.tight_layout()
+#     plt.savefig(f'cor_dis_clip_{epoch}' + '.pdf')
+#     exit()
+    
+    
+# def per_grad_value(epoch, per_grad, C, th):
+
+#     data_collection = []
+#     for p in per_grad:
+#         batch_size = p.shape[0]
+#         data_collection.append(p.reshape(batch_size,-1))
+#     data_collection = torch.cat(data_collection, dim = 1)
+#     print(f'==> get per grad cordinate value summary')
+#     # print(f'==> data_collection.shape: {data_collection.shape}')
+    
+#     total = data_collection.shape[1]
+#     samples = 5
+#     selected_indexes = torch.randint(0, data_collection.shape[0], (samples,))
+#     plot_data = data_collection[selected_indexes]
+    
+#     print(f'threshold list : {[C * th * scale for scale in range(1, 11)]}')
+#     print(f'C * infi_th = {C}*{th}={C*th}')
+#     for i in range(samples):
+#         data = abs(plot_data[i])
+#         print(f'grad_{i}: ', end='')
+#         for scale in range(1, 11):
+#             th_ = C * th * scale
+#             last_th_ = C * th * (scale - 1)
+#             tmp = data[ torch.bitwise_and(data > last_th_, data <= th_) ]
+#             print(f'{tmp.numel()/total:.2f}', end=', ')
+#         print()
+        
+    
+#     for i in range(samples):
+#         data = torch.norm(plot_data[i], p=1.5)
+#         print(f'grad_{i} l1.5 norm: {data}')
+#     for i in range(samples):
+#         data = torch.norm(plot_data[i], p=2)
+#         print(f'grad_{i} l2 norm: {data}')
+    
+    
+    
+    
 
     
+#     '''plot'''
+#     # # plot_data = data_collection[selected_indexes][:, :100]
+#     # plot_data, _ = torch.sort(abs(plot_data), dim = 1)
     
-    data_collection = []
-    for p in per_grad:
-        batch_size = p.shape[0]
-        data_collection.append(p.reshape(batch_size,-1))
-        
-    data_collection = torch.cat(data_collection, dim = 1)
-    print(f'==> data_collection.shape: {data_collection.shape}')
+#     # plt.figure(figsize=(12, 8))
+#     # plt.style.use('seaborn-dark')
     
-    samples = 15
-    selected_indexes = torch.randint(0, data_collection.shape[0], (samples,))
-    plot_data = data_collection[selected_indexes]
+#     # mode_color_line = 'b'
     
-    plt.figure(figsize=(12, 8))
-    plt.style.use('seaborn-dark')
-    
-    mode_color_his = '#f97306'
-    mode_color_line = 'b'
-    num_bins = 500
-    for i in range(samples):
-        plt.subplot(4,4,i+1)
-        data = plot_data[i].cpu().numpy()
-        plt.hist(data, bins = num_bins, density = True, color = mode_color_his)
-        
-        results = data
-        mu = np.mean(results)
-        sigma = np.std(results)
-        vec_norm = np.linalg.norm(results, ord = 2)
-        x = np.linspace(mu - 3*sigma, mu + 3*sigma, num_bins)
-        plt.plot(x, stats.norm.pdf(x, mu, sigma), '--', label = f'norm:{vec_norm:.1f}\n$\mu:{mu:.2f}$\n$\sigma:{sigma:.2f}$', color = mode_color_line)
-        
-        # plt.text(60, .025, r'$\mu=100,\ \sigma=15$')
-        plt.legend()
-        plt.title(f'grad_{i}', fontsize = 8)
-    
-    
-    plt.subplot(4, 4, samples+1)
-    for i in range(samples):
-        data = plot_data[i].cpu().numpy()
-        plt.hist(data, bins = num_bins, density = True)
-    plt.title(f'all grads', fontsize = 4)
-    
-    
-    # plt.title('Histogram of coordinate value')
-    plt.tight_layout()
-    plt.savefig(f'cor_dis_clip_{epoch}' + '.pdf')
-    exit()
-    
-    
-def per_grad_value(epoch, per_grad, C, th):
+#     # th_ = C*th
+#     # dummy = [th_] * int(plot_data.shape[1])
+#     # for i in range(samples):
+#     #     plt.subplot(4,4,i+1)
+#     #     data = plot_data[i].cpu().numpy()
+#     #     plt.plot(data, "*", markersize = 0.2)
+#     #     plt.plot(dummy, label = f'C * infi_th = {C}*{th}={th_}', color = mode_color_line)
 
-    data_collection = []
-    for p in per_grad:
-        batch_size = p.shape[0]
-        data_collection.append(p.reshape(batch_size,-1))
-    data_collection = torch.cat(data_collection, dim = 1)
-    print(f'==> get per grad cordinate value summary')
-    # print(f'==> data_collection.shape: {data_collection.shape}')
+#     #     plt.legend()
+#     #     plt.title(f'grad_{i}', fontsize = 8)
     
-    total = data_collection.shape[1]
-    samples = 5
-    selected_indexes = torch.randint(0, data_collection.shape[0], (samples,))
-    plot_data = data_collection[selected_indexes]
+#     # plt.tight_layout()
+#     # plt.savefig(f'cor_value_{epoch}' + '.pdf')
     
-    print(f'threshold list : {[C * th * scale for scale in range(1, 11)]}')
-    print(f'C * infi_th = {C}*{th}={C*th}')
-    for i in range(samples):
-        data = abs(plot_data[i])
-        print(f'grad_{i}: ', end='')
-        for scale in range(1, 11):
-            th_ = C * th * scale
-            last_th_ = C * th * (scale - 1)
-            tmp = data[ torch.bitwise_and(data > last_th_, data <= th_) ]
-            print(f'{tmp.numel()/total:.2f}', end=', ')
-        print()
+#     # exit()
+    
+    
+    
+# def grad_norm_summary(lr, total_epoch, average_of_dif_norm, average_of_inverse_dif_norm):
+    
+#     keys = sorted(list(average_of_dif_norm.keys()))
+#     if len(average_of_dif_norm[keys[0]]) == 0:
+#         return
+#     print(f'==> making summary of the average of dif p norm')
+    
+    
+    
+#     plt.figure(figsize=(12, 8))
+#     plt.style.use('seaborn-dark')
+#     for i in range(len(keys)):
+#         p_norm = keys[i]
+#         data = average_of_dif_norm[p_norm]
+#         plt.subplot(4,4,i+1)
+#         plt.plot(data, label = f'p_norm:{p_norm}', linewidth = 0.8)
+#         plt.legend()
+#     plt.tight_layout()
+#     plt.savefig(f'p_norms_{total_epoch}_{lr}' + '.pdf')
+    
+#     plt.figure(figsize=(12, 8))
+#     plt.style.use('seaborn-dark')
+#     for i in range(len(keys)):
+#         p_norm = keys[i]
+#         data = average_of_inverse_dif_norm[p_norm]
+#         plt.subplot(4,4,i+1)
+#         plt.plot(data, label = f'p_norm:{p_norm}', linewidth = 0.8)
+#         plt.legend()
+#     plt.tight_layout()
+#     plt.savefig(f'p_norms_inverse_{total_epoch}_{lr}' + '.pdf')
+    
+    
+    
+    
+# def per_grad_th_binary_summary(flattened_per_grad, thresholds):
+#     # for th in thresholds:
+#     #     tmp = abs(torch.clone(flattened_per_grad))
+#     #     small_loc = tmp < th
+#     #     big_loc = tmp >= th
         
-    
-    for i in range(samples):
-        data = torch.norm(plot_data[i], p=1.5)
-        print(f'grad_{i} l1.5 norm: {data}')
-    for i in range(samples):
-        data = torch.norm(plot_data[i], p=2)
-        print(f'grad_{i} l2 norm: {data}')
-    
-    
-    
-    
+#     #     tmp[small_loc] = 0
+#     #     tmp[big_loc] = 1
+        
+#     #     result = tmp.sum(dim = 0).cpu().numpy()
 
-    
-    '''plot'''
-    # # plot_data = data_collection[selected_indexes][:, :100]
-    # plot_data, _ = torch.sort(abs(plot_data), dim = 1)
-    
-    # plt.figure(figsize=(12, 8))
-    # plt.style.use('seaborn-dark')
-    
-    # mode_color_line = 'b'
-    
-    # th_ = C*th
-    # dummy = [th_] * int(plot_data.shape[1])
-    # for i in range(samples):
-    #     plt.subplot(4,4,i+1)
-    #     data = plot_data[i].cpu().numpy()
-    #     plt.plot(data, "*", markersize = 0.2)
-    #     plt.plot(dummy, label = f'C * infi_th = {C}*{th}={th_}', color = mode_color_line)
+#     #     plt.figure(figsize=(8, 4))
+#     #     plt.style.use('seaborn-dark')
+#     #     plt.plot(result, linewidth = 0.8)
+#     #     plt.title(f'bigger than {th} is 1 and smaller than {th} is 0')
+#     #     plt.tight_layout()
+#     #     plt.savefig(f'BS_th_{th}' + '.pdf')
+        
+#     # for th in thresholds:
+#     # for percent in [0.0001, 0.001, 0.01, 0.1]:
+#     #     tmp = abs(torch.clone(flattened_per_grad))
+#     #     s,_ =torch.topk(tmp, dim = 1, k = int(tmp.shape[1] * percent) )
+        
+#     #     the_one = s[:,-1:]
+        
+#     #     small_loc = tmp < the_one
+#     #     big_loc = tmp >= the_one
+        
+#     #     tmp[small_loc] = 0
+#     #     tmp[big_loc] = 1
+        
+#     #     result = tmp.sum(dim = 0).cpu().numpy()
 
-    #     plt.legend()
-    #     plt.title(f'grad_{i}', fontsize = 8)
+#     #     plt.figure(figsize=(8, 4))
+#     #     plt.style.use('seaborn-dark')
+#     #     plt.plot(result, linewidth = 0.8)
+#     #     plt.title(f'top {percent} of total is 1 and smaller is 0')
+#     #     plt.tight_layout()
+#     #     plt.savefig(f'BS_inner_{percent}' + '.pdf')
     
-    # plt.tight_layout()
-    # plt.savefig(f'cor_value_{epoch}' + '.pdf')
+#     '''seperate l2 norm '''
+#     percent = 0.1
+#     tmp = abs(torch.clone(flattened_per_grad))
+#     s,_ =torch.topk(tmp, dim = 1, k = int(tmp.shape[1] * percent) )
     
-    # exit()
+#     the_one = s[:,-1:]
     
+#     small_loc = tmp < the_one
+#     big_loc = tmp >= the_one
     
+#     all_small = torch.clone(tmp)
+#     all_bigger = torch.clone(tmp)
+#     all_small[big_loc] = 0
+#     all_bigger[small_loc] = 0
     
-def grad_norm_summary(lr, total_epoch, average_of_dif_norm, average_of_inverse_dif_norm):
+#     all_small = all_small.norm(dim = 1)
+#     all_bigger = all_bigger.norm(dim = 1)
     
-    keys = sorted(list(average_of_dif_norm.keys()))
-    if len(average_of_dif_norm[keys[0]]) == 0:
-        return
-    print(f'==> making summary of the average of dif p norm')
+#     all_norm = tmp.norm(dim=1)
     
+#     checking_num = 30
+#     print(f'top {percent}')
+#     for i in range(checking_num):
+#         print(f'==> grad {i} all_small: {all_small[i]:.2f} all_bigger: {all_bigger[i]:.2f} all_norm: {all_norm[i]:.2f}')
+#         print(f'    small portion: {all_small[i]/all_norm[i]:.2f} bigger portion: {all_bigger[i]/all_norm[i]:.2f} ')
+#         print()
     
-    
-    plt.figure(figsize=(12, 8))
-    plt.style.use('seaborn-dark')
-    for i in range(len(keys)):
-        p_norm = keys[i]
-        data = average_of_dif_norm[p_norm]
-        plt.subplot(4,4,i+1)
-        plt.plot(data, label = f'p_norm:{p_norm}', linewidth = 0.8)
-        plt.legend()
-    plt.tight_layout()
-    plt.savefig(f'p_norms_{total_epoch}_{lr}' + '.pdf')
-    
-    plt.figure(figsize=(12, 8))
-    plt.style.use('seaborn-dark')
-    for i in range(len(keys)):
-        p_norm = keys[i]
-        data = average_of_inverse_dif_norm[p_norm]
-        plt.subplot(4,4,i+1)
-        plt.plot(data, label = f'p_norm:{p_norm}', linewidth = 0.8)
-        plt.legend()
-    plt.tight_layout()
-    plt.savefig(f'p_norms_inverse_{total_epoch}_{lr}' + '.pdf')
-    
-    
-    
-    
-def per_grad_th_binary_summary(flattened_per_grad, thresholds):
-    # for th in thresholds:
-    #     tmp = abs(torch.clone(flattened_per_grad))
-    #     small_loc = tmp < th
-    #     big_loc = tmp >= th
-        
-    #     tmp[small_loc] = 0
-    #     tmp[big_loc] = 1
-        
-    #     result = tmp.sum(dim = 0).cpu().numpy()
-
-    #     plt.figure(figsize=(8, 4))
-    #     plt.style.use('seaborn-dark')
-    #     plt.plot(result, linewidth = 0.8)
-    #     plt.title(f'bigger than {th} is 1 and smaller than {th} is 0')
-    #     plt.tight_layout()
-    #     plt.savefig(f'BS_th_{th}' + '.pdf')
-        
-    # for th in thresholds:
-    # for percent in [0.0001, 0.001, 0.01, 0.1]:
-    #     tmp = abs(torch.clone(flattened_per_grad))
-    #     s,_ =torch.topk(tmp, dim = 1, k = int(tmp.shape[1] * percent) )
-        
-    #     the_one = s[:,-1:]
-        
-    #     small_loc = tmp < the_one
-    #     big_loc = tmp >= the_one
-        
-    #     tmp[small_loc] = 0
-    #     tmp[big_loc] = 1
-        
-    #     result = tmp.sum(dim = 0).cpu().numpy()
-
-    #     plt.figure(figsize=(8, 4))
-    #     plt.style.use('seaborn-dark')
-    #     plt.plot(result, linewidth = 0.8)
-    #     plt.title(f'top {percent} of total is 1 and smaller is 0')
-    #     plt.tight_layout()
-    #     plt.savefig(f'BS_inner_{percent}' + '.pdf')
-    
-    '''seperate l2 norm '''
-    percent = 0.1
-    tmp = abs(torch.clone(flattened_per_grad))
-    s,_ =torch.topk(tmp, dim = 1, k = int(tmp.shape[1] * percent) )
-    
-    the_one = s[:,-1:]
-    
-    small_loc = tmp < the_one
-    big_loc = tmp >= the_one
-    
-    all_small = torch.clone(tmp)
-    all_bigger = torch.clone(tmp)
-    all_small[big_loc] = 0
-    all_bigger[small_loc] = 0
-    
-    all_small = all_small.norm(dim = 1)
-    all_bigger = all_bigger.norm(dim = 1)
-    
-    all_norm = tmp.norm(dim=1)
-    
-    checking_num = 30
-    print(f'top {percent}')
-    for i in range(checking_num):
-        print(f'==> grad {i} all_small: {all_small[i]:.2f} all_bigger: {all_bigger[i]:.2f} all_norm: {all_norm[i]:.2f}')
-        print(f'    small portion: {all_small[i]/all_norm[i]:.2f} bigger portion: {all_bigger[i]/all_norm[i]:.2f} ')
-        print()
-    
-    exit()
+#     exit()
 
 
 import json
