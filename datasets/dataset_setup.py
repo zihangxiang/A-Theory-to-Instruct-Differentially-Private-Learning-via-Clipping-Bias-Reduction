@@ -16,7 +16,6 @@ else:
 def get_dataset_data_path():
     from pathlib import Path
     path = str( Path(__file__).parent.parent.parent) + '/DATA'
-    # path = "/ibex/scratch/xiangz/IMG_dataset" + '/DATA'
     return path
 
 def setup_seed(seed):

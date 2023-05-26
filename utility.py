@@ -196,6 +196,10 @@ def parse_args():
     parser.add_argument("--epsilon", help = "the epsilon value", type=float, default=8.0, required=True)
     parser.add_argument("--lr", help = "learing rate", type=float, default=0.01, required=True)
     parser.add_argument("--log_dir", help = "log directory", type=str, default='logs', required=True)
+    parser.add_argument("--beta", help = "momemtum beta", type=float, default=0.9, required=False)
+    parser.add_argument("--which_norm", help = "clipping norm type", type=int, default=2, required=False)
+    parser.add_argument("--C", help = "clipping C", type=float, default=1, required=False)
+
     return parser.parse_args()
 
 

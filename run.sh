@@ -1,10 +1,10 @@
-for expected_batchsize in 2000
+for expected_batchsize in 5000
 do
 
 for epsilon in 8
 do
 
-for EPOCH in 50
+for EPOCH in 40
 do
 
 for lr in 0.1

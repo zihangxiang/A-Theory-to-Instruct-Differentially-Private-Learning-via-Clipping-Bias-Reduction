@@ -9,8 +9,8 @@ from . import norm_layer as nl
 smart_batchnorm = nl.smart_batchnorm
 # smart_batchnorm = nn.BatchNorm2d
 
-conv_layer = partial(nn.Conv2d, bias = False)
-# conv_layer = partial(nl.Conv2d, bias = False)
+# conv_layer = partial(nn.Conv2d, bias = False)
+conv_layer = partial(nl.Conv2d, bias = False)
 
 
 ''' 3 places are modified: base block, resblock, conv, final linear layer '''
@@ -59,11 +59,11 @@ class BasicBlock(nn.Module):
 
     def forward(self, x):
         # ''' norm layer before activation '''
-        NLA = F.relu
-        out = NLA(self.bn1(self.conv1(x)))
-        out = self.bn2(self.conv2(out))
-        out = out + self.shortcut(x)
-        out = NLA(out)
+        # NLA = F.relu
+        # out = NLA(self.bn1(self.conv1(x)))
+        # out = self.bn2(self.conv2(out))
+        # out = out + self.shortcut(x)
+        # out = NLA(out)
         
         # NLA = F.elu
         # out = NLA(self.bn1(self.conv1(x)))
@@ -78,14 +78,12 @@ class BasicBlock(nn.Module):
         # out = out + self.shortcut(x)
         # out = NLA(out)
         
-        # ''' norm layer after activation '''
-        # NLA = F.elu
-        # out = self.bn1(NLA(self.conv1(x)))
-        # out = self.bn2(self.conv2(out))
-        # out = out + self.shortcut(x)
-        # out = self.bn3( NLA(out) )
-        
-
+        ''' norm layer after activation '''
+        NLA = F.elu
+        out = self.bn1(NLA(self.conv1(x)))
+        out = self.bn2(self.conv2(out))
+        out = out + self.shortcut(x)
+        out = self.bn3( NLA(out) )
         
         return out
 
@@ -113,13 +111,13 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        out = torch.tanh(self.bn1(self.conv1(x)))
-        out = self.layer1(out)
-        out = self.layer2(out)
-        out = self.layer3(out)
-        out = F.adaptive_avg_pool2d(out, 2)
-        out = out.view(out.size(0), -1)
-        out = self.linear(out)
+        # out = torch.tanh(self.bn1(self.conv1(x)))
+        # out = self.layer1(out)
+        # out = self.layer2(out)
+        # out = self.layer3(out)
+        # out = F.adaptive_avg_pool2d(out, 2)
+        # out = out.view(out.size(0), -1)
+        # out = self.linear(out)
         
         # out = self.bn1( F.elu( self.conv1(x) ) )
         # out = self.layer1(out)
@@ -129,15 +127,15 @@ class ResNet(nn.Module):
         # out = out.view(out.size(0), -1)
         # out = self.linear(out)
 
-        # out = self.bn1( F.elu( self.conv1(x) ) )
-        # out = self.layer1(out)
-        # out = self.layer2(out)
-        # out = self.layer3(out)
-        # out = F.adaptive_avg_pool2d(out, 2)
-        # out = out.view(out.size(0), -1)
-        # ''''''
-        # out = (out - out.mean(dim=1, keepdim=True)) / (out.std(dim=1, keepdim=True)+ 1e-6)
-        # out = self.linear(out)
+        out = self.bn1( F.elu( self.conv1(x) ) )
+        out = self.layer1(out)
+        out = self.layer2(out)
+        out = self.layer3(out)
+        out = F.adaptive_avg_pool2d(out, 2)
+        out = out.view(out.size(0), -1)
+        ''''''
+        out = (out - out.mean(dim=1, keepdim=True)) / (out.std(dim=1, keepdim=True)+ 1e-6)
+        out = self.linear(out)
         
         return out
 

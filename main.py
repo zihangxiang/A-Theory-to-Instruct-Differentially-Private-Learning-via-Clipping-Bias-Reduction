@@ -20,23 +20,22 @@ if __name__ == '__main__':
     train_loader = ph.privatized_loader(all_datasets[0], arg_setup.expected_batchsize)
     
     ''' total image number for batch parameter computation, pub data, from train data'''
-    ''' batch size for pub data used to compute batch para.'''
     arg_setup.usable_train_data_samples = len(all_datasets[0])
     
     ''' sampling rate for training private data '''
     sampling_rate = arg_setup.expected_batchsize / len(train_loader.dataset) 
     
     ''' compute dp noise '''
-    sigma = arg_setup.sigma = 1 * aa.get_std(q = arg_setup.expected_batchsize / (arg_setup.usable_train_data_samples),
+    arg_setup.sigma = aa.get_std(q = arg_setup.expected_batchsize / (arg_setup.usable_train_data_samples),
                                                  EPOCH = arg_setup.EPOCH, epsilon = arg_setup.epsilon, delta = 1e-5, verbose = True)
-    
-    arg_setup.beta = 0.9
-    arg_setup.which_norm = 2
-    arg_setup.C = 1
 
     arg_setup.iter_num = int(arg_setup.EPOCH / (arg_setup.expected_batchsize) * 50000)
+    
+    '''sgd opti'''
+    # opti = torch.optim.SGD(model.parameters(), lr = arg_setup.lr, momentum = 0.0 ); arg_setup.beta = 0.9
 
-    opti = torch.optim.SGD(model.parameters(), lr = arg_setup.lr, momentum = 0.0 )
+    '''adam opti'''
+    opti = torch.optim.Adam(model.parameters(), lr = 0.01); arg_setup.beta = 0
     
     ''' function signature '''
     TRAIN_SETUP_LIST = ('epoch', 'device', 'optimizer', 'loss_metric', 'enable_per_grad')
@@ -46,7 +45,7 @@ if __name__ == '__main__':
                     'optimizer': opti,
                     'loss_metric': dms.loss_metric, 
                     'enable_per_grad': (True, 'opacus'),
-                    'sigma': sigma,
+                    'sigma': arg_setup.sigma,
                     }
 
     trainer = train_scheduler.train_master(

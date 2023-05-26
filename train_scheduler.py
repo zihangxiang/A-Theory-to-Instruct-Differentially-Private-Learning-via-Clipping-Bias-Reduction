@@ -36,7 +36,7 @@ class train_master:
         logger.init_log(dir = arg_setup.log_dir)
         self.arg_setup = arg_setup
 
-        self.data_recorder = logger.data_recorder(f'clip_c{self.arg_setup.C}.json')
+        # self.data_recorder = logger.data_recorder(f'clip_c{self.arg_setup.C}.json')
 
         self.model = model   
         self.num_of_classes = self.model.num_of_classes
@@ -119,42 +119,11 @@ class train_master:
         print(f'==> all labels:', set(self.whole_label_container_test.tolist()))
   
 
-
-        # ''' using pub data '''
-        # self.pub_num = self.arg_setup.pub_num
-        # self.dummy_index_pub = torch.tensor( [ i for i in range(self.pub_num) ] )
-        
-        # if self.pub_num == 0:
-        #     self.dummy_index_pub = torch.tensor( [] )
-        # else:
-        #     self.dummy_index_pub_tmp = []
-        #     for _ in range(self.num_groups):
-        #         tmp_index = torch.randint(self.pub_num, (self.times_larger,))
-        #         self.dummy_index_pub_tmp.append( tmp_index)
-        #     self.dummy_index_pub = torch.cat(self.dummy_index_pub_tmp)
-        
-        # print('==> pub data generation done, pub data shape:', self.dummy_index_pub.shape)
-        
         '''logging'''
         self.data_logger.write_log(f'weighted_recall.csv', self.arg_setup)
         logger.write_log(f'arg_setup: {self.arg_setup}')
         for i in range(torch.cuda.device_count()):
             logger.write_log(f'\ncuda memory summary for device {i}:\n{torch.cuda.memory_summary(device=f"cuda:{i}", abbreviated=True)}', verbose=True)
-    
-    # def get_reindex(self, real_batch_num):
-    #     ''' reindexing '''
-    #     ''' [pri, pri, pub, pub, pub, pub] -> [pri, pub, pub, pri, pub, pub] '''
-    #     if self.times_larger == 0:
-    #         return torch.tensor( np.arange(real_batch_num) )
-
-    #     reindexing = []
-    #     for i in range(real_batch_num):
-    #         reindexing.append(i)
-    #         # self.reindexing += list( range(self.num_of_models + i * times_larger, self.num_of_models + (i + 1) * times_larger) )
-    #         ''' fetch the data sample from each data batch, in the same position i'''
-    #         reindexing += [i + self.num_of_models * j for j in range(1, self.times_larger+1)]
-    #     reindexing = torch.tensor(self.reindexing, device = self.model.device)
-    #     return reindexing
 
     def count_parameters(self):
         total = 0
@@ -231,50 +200,14 @@ class train_master:
 
         ''' ending '''
 
-        self.data_recorder.save()
+        # self.data_recorder.save()
         logger.write_log(f'\n\n=> TIME for ALL : {time.time()-s:.2f}  secs')
     
     def _per_sample_augmentation(self):
         ''' per sample augmentation '''
         # if self.pub_num == 0:
         return torch.tensor([], device=self.model.device), torch.tensor([], dtype=torch.int64, device=self.model.device)
-        # tmp_index = np.random.permutation(self.dummy_index_pub)
-        
-        # pub_input = self.whole_data_container_test[tmp_index]
-        # pub_target = self.whole_label_container_test[tmp_index]
-        
-        # return pub_input, pub_target
-    
-    def sampling_noise_summary(self, index, per_grad):
-        grad_flatten = self.flatten_to_rows(per_grad[0].shape[0], per_grad)
 
-        grad_flatten_mean = torch.mean(grad_flatten, dim=0, keepdim=True)
-        center_around_mean = grad_flatten - grad_flatten_mean
-        grad_norm = torch.norm(grad_flatten, dim=1)
-        sorted_grad_norm = torch.sort(grad_norm)[0]
-        
-        quantile_0_25_50_75_100 = [sorted_grad_norm[0]] + [sorted_grad_norm[int(len(sorted_grad_norm) * i / 4) - 1] for i in range(1,5)]
-        quantile_0_25_50_75_100 = [round(float(q),3) for q in quantile_0_25_50_75_100]
-        last_time_norm_of_grad_used_to_update_model = torch.cat([p.reshape(1, -1) for p in self.grad_momentum], dim=1).norm()
-        sampling_noise = torch.norm(center_around_mean, dim=1).mean()
-        per_grad_mean_norm = grad_flatten_mean.norm()
-
-        self.data_recorder.add_record('sampling_noise', float(sampling_noise))
-        self.data_recorder.add_record('quantile_0', quantile_0_25_50_75_100[0])
-        self.data_recorder.add_record('quantile_25', quantile_0_25_50_75_100[1])
-        self.data_recorder.add_record('quantile_50', quantile_0_25_50_75_100[2])
-        self.data_recorder.add_record('quantile_75', quantile_0_25_50_75_100[3])
-        self.data_recorder.add_record('quantile_100', quantile_0_25_50_75_100[4])
-        self.data_recorder.add_record('per_grad_mean_norm', float(per_grad_mean_norm) )
-        self.data_recorder.add_record('last_time_norm_of_grad', float(last_time_norm_of_grad_used_to_update_model))
-
-        if index % 2 == 0:
-            logger.write_log(f'    ----> last time norm of grad used to update model: {last_time_norm_of_grad_used_to_update_model:.2f}')
-            logger.write_log(f'    ----> sampling noise: {sampling_noise:.2f}')
-            logger.write_log(f'    ----> quantile 0, 25, 50, 75, 100: {quantile_0_25_50_75_100}')
-            logger.write_log(f'    ----> grad norm mean: {grad_norm.mean():.2f}, std: {grad_norm.std():.2f}')
-            logger.write_log(f'    ----> norm of avg of per grad: {per_grad_mean_norm:.2f}')
-            logger.write_log('\n\n')
 
     def get_per_grad(self, inputs, targets):
 
@@ -320,22 +253,11 @@ class train_master:
                     new_inputs = torch.concat([the_inputs, pub_inputs], dim = 0)
                     new_targets = torch.concat([the_targets, pub_targets], dim = 0)
                     
-                    # reindexing = self.get_reindex(the_inputs.shape[0])
-                    # assert new_inputs.shape[0] == len(reindexing)
-                    # new_inputs = new_inputs[reindexing]
-                    # new_targets = new_targets[reindexing]
-                    
-                    # assert new_inputs.shape[0] == the_inputs.shape[0] * (self.times_larger+1), f'new input shape: {new_inputs.shape}'
-                    
                     new_inputs = torch.stack(torch.split(new_inputs, 1, dim = 0))
                     new_targets = torch.stack(torch.split(new_targets, 1, dim = 0))
                         
                     per_grad = self.get_per_grad(new_inputs, new_targets)
 
-                    if index % 2 == 0: 
-                        self.sampling_noise_summary(index, per_grad)
-
-                    # ''' do something here to do form the real grad '''
                     self.other_routine( per_grad )
                     
                     '''update batch metrics'''
@@ -344,7 +266,7 @@ class train_master:
                         loss = self.train_setups['loss_metric']( predictions, the_targets.flatten() )
                     metrics.batch_update(loss, predictions, the_targets)
 
-                self.data_recorder.add_record('train_acc', float(metrics.__getattr__(self.record_data_type)))
+                # self.data_recorder.add_record('train_acc', float(metrics.__getattr__(self.record_data_type)))
                 
                     
             else:
@@ -357,7 +279,7 @@ class train_master:
                     '''update batch metrics'''
                     metrics.batch_update(loss, predicts, targets)
 
-                self.data_recorder.add_record('test_acc', float(metrics.__getattr__(self.record_data_type)))
+                # self.data_recorder.add_record('test_acc', float(metrics.__getattr__(self.record_data_type)))
 
         metrics.loss /= metrics.num_images
         logger.write_log(f'==> TIME for {train_or_val}: {int(time.time()-s)} secs')
@@ -421,25 +343,3 @@ class train_master:
     def flatten_to_rows(self, leading_dim, iterator):
         return torch.cat([p.reshape(leading_dim, -1) for p in iterator], dim = 1)
     
-# import random
-# class my_randcrop(T.RandomCrop):
-#     @staticmethod
-#     def get_params(img, output_size) :
-#         _, h, w = None, 32,32
-#         th, tw = output_size
-
-#         if h < th or w < tw:
-#             raise ValueError(f"Required crop size {(th, tw)} is larger than input image size {(h, w)}")
-
-#         if w == tw and h == th:
-#             return 0, 0, h, w
-
-#         i = random.randint(0, h - th )
-#         j = random.randint(0, w - tw )
-#         return i, j, th, tw
-
-# class my_RandomHorizontalFlip(T.RandomHorizontalFlip):
-#     def forward(self, img):
-#         if random.random() < self.p:
-#             return img.flip(-1)
-#         return img
