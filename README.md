@@ -10,6 +10,6 @@ Install all packages as specified in `requirements.txt`.
 
 > The modified norm layer and resnets can be found at `./datasets/norm_layer.py` and `./datasets/RESNETS.py`.
 
-> check the setups in script `run.sh`, then run it in a terminal.
+> Check the setups in script `run.sh`, then run it in a terminal.
 
 
