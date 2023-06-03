@@ -1,4 +1,5 @@
 # A Theory to Instruct Differentially-Private Learning via Clipping Bias Reduction
+Full version paper (including appendix) can be found at https://people.csail.mit.edu/devadas/pubs/Clipping_Bias.pdf
 
 ## 1. Running Environment
 Install all packages as specified in `requirements.txt`.
